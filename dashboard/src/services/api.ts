@@ -1,4 +1,4 @@
-// API Service Layer for OpenWA Dashboard
+// API Service Layer for WaZuri Dashboard
 // Centralized API client with TypeScript types
 
 const API_BASE_URL = '/api';

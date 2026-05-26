@@ -1,4 +1,4 @@
-# OpenWA - Docker Compose for Development
+# WaZuri - Docker Compose for Development
 # Quick Start: docker compose -f docker-compose.dev.yml up -d
 
 services:
@@ -7,7 +7,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: openwa-api
+    container_name: wazuri-api
     ports:
       - '127.0.0.1:2785:2785'
     environment:
@@ -19,15 +19,22 @@ services:
       - ENGINE_TYPE=whatsapp-web.js
       - SESSION_DATA_PATH=/app/data/sessions
       - PUPPETEER_HEADLESS=true
-      - PUPPETEER_ARGS=--no-sandbox,--disable-setuid-sandbox,--disable-dev-shm-usage,--disable-gpu
+      - PUPPETEER_ARGS=--no-sandbox,--disable-setuid-sandbox,--disable-dev-shm-usage,--disable-gpu,--no-zygote,--single-process,--disable-extensions,--disable-background-networking,--disable-default-apps,--disable-sync,--disable-translate,--hide-scrollbars,--mute-audio,--no-first-run
       - STORAGE_TYPE=local
       - STORAGE_LOCAL_PATH=/app/data/media
       - WEBHOOK_TIMEOUT=10000
       - WEBHOOK_MAX_RETRIES=3
-      - QUEUE_ENABLED=false
+      - QUEUE_ENABLED=true
+      - QUEUE_CONCURRENCY=1
+      - QUEUE_DELAY=1000
     volumes:
       - ./data:/app/data
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1024M
     healthcheck:
       test:
         [
@@ -46,7 +53,7 @@ services:
     build:
       context: ./dashboard
       dockerfile: Dockerfile
-    container_name: openwa-dashboard
+    container_name: wazuri-dashboard
     ports:
       - '127.0.0.1:2886:80'
     depends_on:

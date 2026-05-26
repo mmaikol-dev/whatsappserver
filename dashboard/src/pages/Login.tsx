@@ -49,7 +49,7 @@ export function Login({ onLogin }: LoginProps) {
     <div className="login-container">
       <div className="login-card">
         <div className="login-logo">
-          <img src="/openwa_logo.webp" alt="OpenWA" className="logo-icon" />
+          <img src="/wazuri_logo.png" alt="WaZuri" className="logo-icon" />
           <span className="version-info">
             {t('login.version', {
               version: __APP_VERSION__,
@@ -84,7 +84,7 @@ export function Login({ onLogin }: LoginProps) {
         <p className="login-help">
           {t('login.help')}{' '}
           <a
-            href="https://github.com/rmyndharis/OpenWA/blob/main/docs/01-project-overview.md"
+            href="https://github.com/rmyndharis/WaZuri/blob/main/docs/01-project-overview.md"
             target="_blank"
             rel="noopener noreferrer"
           >
@@ -96,7 +96,7 @@ export function Login({ onLogin }: LoginProps) {
       <footer className="login-footer">
         <span>{t('login.footer')}</span>
         <a
-          href="https://github.com/rmyndharis/OpenWA"
+          href="https://github.com/rmyndharis/WaZuri"
           target="_blank"
           rel="noopener noreferrer"
           className="github-link"

@@ -111,7 +111,7 @@ export class WebhookService {
       idempotencyKey: generateIdempotencyKey('test', { webhookId: webhook.id }),
       deliveryId: generateDeliveryId(),
       data: {
-        message: 'This is a test webhook from OpenWA',
+        message: 'This is a test webhook from WaZuri',
         webhookId: webhook.id,
         url: webhook.url,
       },

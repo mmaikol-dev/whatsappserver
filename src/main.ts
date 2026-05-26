@@ -38,7 +38,7 @@ if (fs.existsSync(generatedEnvPath)) {
 } else {
   console.log('[Bootstrap] First run detected, creating default configuration...');
   // Create minimal .env.generated with sensible defaults
-  const minimalConfig = `# OpenWA Configuration
+  const minimalConfig = `# WaZuri Configuration
 # Generated automatically on first run
 # Edit via Dashboard > Infrastructure or modify this file directly.
 # Note: values in process env or project .env take precedence over this file.
@@ -142,7 +142,7 @@ async function bootstrap() {
 
   // Swagger documentation
   const config = new DocumentBuilder()
-    .setTitle('OpenWA API')
+    .setTitle('WaZuri API')
     .setDescription('Open Source WhatsApp API Gateway - Free, Self-Hosted HTTP API')
     .setVersion('0.1.6')
     .addApiKey({ type: 'apiKey', name: 'X-API-Key', in: 'header' }, 'X-API-Key')
@@ -162,7 +162,7 @@ async function bootstrap() {
   const port = process.env.PORT || 2785;
   await app.listen(port);
 
-  console.log(`🚀 OpenWA is running on: http://localhost:${port}`);
+  console.log(`🚀 WaZuri is running on: http://localhost:${port}`);
   console.log(`📚 Swagger docs: http://localhost:${port}/api/docs`);
 }
 

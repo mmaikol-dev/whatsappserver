@@ -1,11 +1,11 @@
-# OpenWA - Docker Compose Configuration
+# WaZuri - Docker Compose Configuration
 # Smart Orchestration with Profiles
 
 services:
   # ===== CORE: Traefik Reverse Proxy =====
   traefik:
     image: traefik:v3.0
-    container_name: openwa-traefik
+    container_name: wazuri-traefik
     profiles: ['with-proxy', 'full']
     restart: unless-stopped
     ports:
@@ -18,12 +18,12 @@ services:
       - 'com.openwa.service=proxy'
       - 'com.openwa.core=true'
 
-  # ===== CORE: OpenWA Backend API =====
+  # ===== CORE: WaZuri Backend API =====
   openwa-api:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: openwa-api
+    container_name: wazuri-api
     restart: unless-stopped
     ports:
       - '127.0.0.1:${API_PORT:-2785}:2785'
@@ -102,7 +102,7 @@ services:
     build:
       context: ./dashboard
       dockerfile: Dockerfile.traefik
-    container_name: openwa-dashboard
+    container_name: wazuri-dashboard
     profiles: ['with-dashboard', 'full']
     restart: unless-stopped
     expose:
@@ -116,7 +116,7 @@ services:
   # ===== OPTIONAL: Built-in PostgreSQL =====
   postgres:
     image: postgres:16-alpine
-    container_name: openwa-postgres
+    container_name: wazuri-postgres
     profiles: ['postgres']
     restart: unless-stopped
     environment:
@@ -137,7 +137,7 @@ services:
   # ===== OPTIONAL: Built-in Redis =====
   redis:
     image: redis:7-alpine
-    container_name: openwa-redis
+    container_name: wazuri-redis
     profiles: ['redis']
     restart: unless-stopped
     command: redis-server --appendonly yes
@@ -155,7 +155,7 @@ services:
   # ===== OPTIONAL: Built-in MinIO (S3-compatible) =====
   minio:
     image: minio/minio
-    container_name: openwa-minio
+    container_name: wazuri-minio
     profiles: ['minio']
     restart: unless-stopped
     command: server /data --console-address ":9001"

@@ -214,7 +214,7 @@ export class InfraController {
       const profiles: string[] = [];
 
       // Header
-      envLines.push('# OpenWA Configuration');
+      envLines.push('# WaZuri Configuration');
       envLines.push(`# Generated at ${new Date().toISOString()}`);
       envLines.push('');
 

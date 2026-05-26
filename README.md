@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/logo/wazuri_logo.webp" alt="WaZuri Logo" width="200"/>
+  <img src="docs/logo/wazuri_logo.png" alt="WaZuri Logo" width="200"/>
 </p>
 
 <h1 align="center">WaZuri</h1>
