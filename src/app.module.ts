@@ -1,6 +1,6 @@
 import { Module, DynamicModule, Type } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { TypeOrmModule } from '@nestjs/typeorm';
+import { TypeOrmModule, TypeOrmModuleOptions } from '@nestjs/typeorm';
 import { ThrottlerModule } from '@nestjs/throttler';
 import configuration from './config/configuration';
 import { SessionModule } from './modules/session/session.module';
@@ -50,13 +50,17 @@ if (process.env.QUEUE_ENABLED === 'true') {
       name: 'main',
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (configService: ConfigService) => ({
-        type: 'sqlite' as const,
-        database: configService.get<string>('database.database', './data/main.sqlite'),
-        entities: [__dirname + '/modules/auth/**/*.entity{.ts,.js}', __dirname + '/modules/audit/**/*.entity{.ts,.js}'],
-        synchronize: true,
-        logging: configService.get<boolean>('database.logging', false),
-      }),
+      useFactory: (configService: ConfigService): TypeOrmModuleOptions =>
+        ({
+          type: 'sqlite',
+          database: configService.get<string>('database.database', './data/main.sqlite'),
+          entities: [
+            __dirname + '/modules/auth/**/*.entity{.ts,.js}',
+            __dirname + '/modules/audit/**/*.entity{.ts,.js}',
+          ],
+          synchronize: true,
+          logging: configService.get<boolean>('database.logging', false),
+        }) as TypeOrmModuleOptions,
     }),
 
     // Data Storage Database (pluggable - user data)
@@ -64,7 +68,7 @@ if (process.env.QUEUE_ENABLED === 'true') {
       name: 'data',
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (configService: ConfigService) => {
+      useFactory: (configService: ConfigService): TypeOrmModuleOptions => {
         const dbType = configService.get<'sqlite' | 'postgres'>('dataDatabase.type', 'sqlite');
         const baseConfig = {
           entities: [
@@ -84,7 +88,7 @@ if (process.env.QUEUE_ENABLED === 'true') {
             port: configService.get<number>('dataDatabase.port'),
             username: configService.get<string>('dataDatabase.username'),
             password: configService.get<string>('dataDatabase.password'),
-            database: 'openwa',
+            database: configService.get<string>('dataDatabase.database', 'openwa'),
             // Never auto-sync Postgres in production; rely on migrations.
             synchronize: configService.get<boolean>('dataDatabase.synchronize', false),
             migrationsRun: true,
@@ -93,7 +97,7 @@ if (process.env.QUEUE_ENABLED === 'true') {
             extra: {
               max: configService.get<number>('dataDatabase.poolSize', 10),
             },
-          };
+          } as TypeOrmModuleOptions;
         }
 
         // SQLite: zero-config. Default to synchronize=true so the embedded
@@ -101,11 +105,11 @@ if (process.env.QUEUE_ENABLED === 'true') {
         // Users can opt out with DATABASE_SYNCHRONIZE=false to use migrations instead.
         return {
           ...baseConfig,
-          type: 'sqlite' as const,
+          type: 'sqlite',
           database: configService.get<string>('dataDatabase.database', './data/openwa.sqlite'),
           synchronize: configService.get<boolean>('dataDatabase.synchronize', true),
           migrationsRun: !configService.get<boolean>('dataDatabase.synchronize', true),
-        };
+        } as TypeOrmModuleOptions;
       },
     }),
 

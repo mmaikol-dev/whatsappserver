@@ -1,4 +1,4 @@
-import { DataSource } from 'typeorm';
+import { DataSource, DataSourceOptions } from 'typeorm';
 import { config } from 'dotenv';
 
 // Load environment variables
@@ -7,17 +7,19 @@ config();
 const dbType = process.env.DATABASE_TYPE || 'sqlite';
 
 // SQLite configuration
-const sqliteDataSource = new DataSource({
+const sqliteOptions = {
   type: 'sqlite',
   database: process.env.DATABASE_NAME || './data/openwa.sqlite',
   entities: [__dirname + '/../**/*.entity{.ts,.js}'],
   migrations: [__dirname + '/migrations/*{.ts,.js}'],
   synchronize: false,
   logging: process.env.DATABASE_LOGGING === 'true',
-});
+} as DataSourceOptions;
+
+const sqliteDataSource = new DataSource(sqliteOptions);
 
 // PostgreSQL configuration
-const postgresDataSource = new DataSource({
+const postgresOptions = {
   type: 'postgres',
   host: process.env.DATABASE_HOST || 'localhost',
   port: parseInt(process.env.DATABASE_PORT || '5432', 10),
@@ -37,7 +39,9 @@ const postgresDataSource = new DataSource({
   extra: {
     max: parseInt(process.env.DATABASE_POOL_SIZE || '10', 10),
   },
-});
+} as DataSourceOptions;
+
+const postgresDataSource = new DataSource(postgresOptions);
 
 // Export the appropriate data source based on DATABASE_TYPE
 export default dbType === 'postgres' ? postgresDataSource : sqliteDataSource;
