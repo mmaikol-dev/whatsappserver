@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { useState } from 'react';
 import { MessageSquare, Send, Webhook, Activity, ArrowUpRight, ArrowDownRight, Loader2 } from 'lucide-react';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { useSessionsQuery, useSessionStatsQuery, useWebhooksQuery, useStopSessionMutation } from '../hooks/queries';
@@ -14,6 +15,7 @@ export function Dashboard() {
   const { data: stats } = useSessionStatsQuery();
   const { data: webhooks = [] } = useWebhooksQuery();
   const stopMutation = useStopSessionMutation();
+  const [disconnectingId, setDisconnectingId] = useState<string | null>(null);
   const loading = loadingSessions;
   const error = sessionsError instanceof Error
     ? sessionsError.message
@@ -23,10 +25,13 @@ export function Dashboard() {
   const webhookCount = webhooks.length;
 
   const handleDisconnect = async (id: string) => {
+    setDisconnectingId(id);
     try {
       await stopMutation.mutateAsync(id);
     } catch (err) {
       console.error('Failed to disconnect:', err);
+    } finally {
+      setDisconnectingId(null);
     }
   };
 
@@ -143,7 +148,12 @@ export function Dashboard() {
                     {t('dashboard.view')}
                   </button>
                   {['ready', 'initializing', 'connecting', 'qr_ready'].includes(session.status) && (
-                    <button className="btn-sm danger" onClick={() => handleDisconnect(session.id)}>
+                    <button
+                      className="btn-sm danger"
+                      onClick={() => handleDisconnect(session.id)}
+                      disabled={disconnectingId === session.id}
+                    >
+                      {disconnectingId === session.id && <Loader2 className="animate-spin" size={14} />}
                       {t('dashboard.disconnect')}
                     </button>
                   )}

@@ -258,7 +258,8 @@ export function Webhooks() {
               <button className="btn-secondary" onClick={() => setShowCreateModal(false)}>
                 {t('common.cancel')}
               </button>
-              <button className="btn-primary" onClick={handleCreate}>
+              <button className="btn-primary" onClick={handleCreate} disabled={createMutation.isPending}>
+                {createMutation.isPending && <Loader2 className="animate-spin" size={16} />}
                 {t('common.create')}
               </button>
             </div>
@@ -314,7 +315,8 @@ export function Webhooks() {
               <button className="btn-secondary" onClick={() => setShowEditModal(false)}>
                 {t('common.cancel')}
               </button>
-              <button className="btn-primary" onClick={handleEdit}>
+              <button className="btn-primary" onClick={handleEdit} disabled={updateMutation.isPending}>
+                {updateMutation.isPending && <Loader2 className="animate-spin" size={16} />}
                 {t('webhooks.saveChanges')}
               </button>
             </div>
@@ -351,7 +353,8 @@ export function Webhooks() {
               <button className="btn-secondary" onClick={() => setShowDeleteModal(false)}>
                 {t('common.cancel')}
               </button>
-              <button className="btn-danger" onClick={handleDelete}>
+              <button className="btn-danger" onClick={handleDelete} disabled={deleteMutation.isPending}>
+                {deleteMutation.isPending && <Loader2 className="animate-spin" size={16} />}
                 {t('common.delete')}
               </button>
             </div>

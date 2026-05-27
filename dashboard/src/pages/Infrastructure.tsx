@@ -930,7 +930,8 @@ export function Infrastructure() {
                     <button className="btn-secondary" onClick={() => setShowRestartModal(false)}>
                       {t('infrastructure.restart.later')}
                     </button>
-                    <button className="btn-primary" onClick={handleRestart}>
+                    <button className="btn-primary" onClick={handleRestart} disabled={restartStatus !== 'idle'}>
+                      {restartStatus !== 'idle' && <Loader2 className="animate-spin" size={16} />}
                       {t('infrastructure.restart.now')}
                     </button>
                   </div>

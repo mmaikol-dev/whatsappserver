@@ -80,10 +80,10 @@ export function ApiKeys() {
     }
   };
 
-  const confirmAndExecute = () => {
+  const confirmAndExecute = async () => {
     if (!confirmAction) return;
-    if (confirmAction.type === 'delete') handleDelete(confirmAction.id);
-    else handleRevoke(confirmAction.id);
+    if (confirmAction.type === 'delete') await handleDelete(confirmAction.id);
+    else await handleRevoke(confirmAction.id);
     setConfirmAction(null);
   };
 
@@ -281,7 +281,8 @@ export function ApiKeys() {
                 <button className="btn-secondary" onClick={() => setShowModal(false)}>
                   {t('common.cancel')}
                 </button>
-                <button className="btn-primary" onClick={handleCreate}>
+                <button className="btn-primary" onClick={handleCreate} disabled={createMutation.isPending}>
+                  {createMutation.isPending && <Loader2 className="animate-spin" size={16} />}
                   {t('common.create')}
                 </button>
               </div>
@@ -370,7 +371,14 @@ export function ApiKeys() {
               <button className="btn-secondary" onClick={() => setConfirmAction(null)}>
                 {t('common.cancel')}
               </button>
-              <button className="btn-danger" onClick={confirmAndExecute}>
+              <button
+                className="btn-danger"
+                onClick={confirmAndExecute}
+                disabled={deleteMutation.isPending || revokeMutation.isPending}
+              >
+                {(deleteMutation.isPending || revokeMutation.isPending) && (
+                  <Loader2 className="animate-spin" size={16} />
+                )}
                 {confirmAction.type === 'delete'
                   ? t('apiKeys.confirm.delete')
                   : t('apiKeys.confirm.revoke')}

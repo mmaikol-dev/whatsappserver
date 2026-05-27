@@ -25,20 +25,48 @@ export function Sessions() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   useWebSocket({
     onSessionStatus: useCallback(
-      (event: { sessionId: string; status: string }) => {
+      (event: { sessionId: string; status: string; phone?: string; pushName?: string; lastActiveAt?: string }) => {
         setSessions(prev =>
-          prev.map(s => (s.id === event.sessionId ? { ...s, status: event.status as Session['status'] } : s)),
+          prev.map(s =>
+            s.id === event.sessionId
+              ? {
+                  ...s,
+                  status: event.status as Session['status'],
+                  phone: event.phone ?? s.phone,
+                  pushName: event.pushName ?? s.pushName,
+                  lastActive: event.lastActiveAt ?? s.lastActive,
+                }
+              : s,
+          ),
         );
+        if (qrData?.sessionId === event.sessionId && event.status === 'ready') {
+          setQrData(null);
+          currentSessionName.current = '';
+          void fetchSessions();
+        }
         if (event.status === 'ready') {
           toast.success(t('sessions.toasts.readyTitle'), t('sessions.toasts.readyDesc'));
         } else if (event.status === 'disconnected') {
           toast.warning(t('sessions.toasts.disconnectedTitle'), t('sessions.toasts.disconnectedDesc'));
         }
       },
-      [toast, t],
+      [qrData?.sessionId, toast, t],
+    ),
+    onQRCode: useCallback(
+      (event: { sessionId: string; qrCode: string }) => {
+        const session = sessions.find(s => s.id === event.sessionId);
+        setQrData({
+          sessionId: event.sessionId,
+          sessionName: session?.name || currentSessionName.current,
+          qrCode: event.qrCode,
+        });
+        setSessions(prev => prev.map(s => (s.id === event.sessionId ? { ...s, status: 'qr_ready' } : s)));
+      },
+      [sessions],
     ),
   });
 
@@ -62,28 +90,39 @@ export function Sessions() {
   const qrRefreshInterval = useRef<ReturnType<typeof setInterval> | null>(null);
   const currentSessionName = useRef<string>('');
 
-  const fetchQR = useCallback(async (sessionId: string) => {
-    try {
-      const qr = await sessionApi.getQR(sessionId);
-      setQrData({ sessionId, sessionName: currentSessionName.current, qrCode: qr.qrCode });
-      if (qr.status === 'ready') {
-        setQrData(null);
-        currentSessionName.current = '';
-        fetchSessions();
+  const fetchQR = useCallback(
+    async (sessionId: string) => {
+      try {
+        const qr = await sessionApi.getQR(sessionId);
+        setQrData({ sessionId, sessionName: currentSessionName.current, qrCode: qr.qrCode });
+        if (qr.status === 'ready') {
+          setQrData(null);
+          currentSessionName.current = '';
+          void fetchSessions();
+        }
+      } catch (err) {
+        const session = await sessionApi.get(sessionId).catch(() => null);
+        if (session?.status === 'ready') {
+          setQrData(null);
+          currentSessionName.current = '';
+          void fetchSessions();
+        } else if (session) {
+          setSessions(prev => prev.map(s => (s.id === sessionId ? session : s)));
+        } else {
+          console.error('Failed to get QR:', err);
+        }
       }
-    } catch {
-      setQrData(null);
-      currentSessionName.current = '';
-      fetchSessions();
-    }
-  }, []);
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
 
   useEffect(() => {
     if (qrData) {
       currentSessionName.current = qrData.sessionName;
       qrRefreshInterval.current = setInterval(() => {
         fetchQR(qrData.sessionId);
-      }, 5000);
+      }, 2000);
     }
     return () => {
       if (qrRefreshInterval.current) clearInterval(qrRefreshInterval.current);
@@ -110,6 +149,7 @@ export function Sessions() {
 
   const handleDelete = async (id: string) => {
     const session = sessions.find(s => s.id === id);
+    setActionLoading(`delete:${id}`);
     try {
       await sessionApi.delete(id);
       setSessions(sessions.filter(s => s.id !== id));
@@ -122,6 +162,7 @@ export function Sessions() {
       console.error('Failed to delete:', err);
       toast.error(t('sessions.delete.errorTitle'), msg);
     } finally {
+      setActionLoading(null);
       setDeleteConfirmId(null);
     }
   };
@@ -133,10 +174,10 @@ export function Sessions() {
       return;
     }
 
+    setActionLoading(`start:${id}`);
     try {
       await sessionApi.start(id);
-      setSessions(sessions.map(s => (s.id === id ? { ...s, status: 'connecting' } : s)));
-      await fetchSessions();
+      setSessions(sessions.map(s => (s.id === id ? { ...s, status: 'initializing' } : s)));
       handleShowQR(id);
     } catch (err) {
       console.error('Failed to start:', err);
@@ -144,22 +185,30 @@ export function Sessions() {
       if (err instanceof Error && err.message.includes('already started')) {
         handleShowQR(id);
       }
+    } finally {
+      setActionLoading(null);
     }
   };
 
   const handleShowQR = async (id: string) => {
     const session = sessions.find(s => s.id === id);
     const sessionName = session?.name || '';
+    currentSessionName.current = sessionName;
+    setQrData({ sessionId: id, sessionName, qrCode: '' });
+    setActionLoading(`qr:${id}`);
     try {
       const qr = await sessionApi.getQR(id);
       setQrData({ sessionId: id, sessionName, qrCode: qr.qrCode });
     } catch (err) {
       console.error('Failed to get QR:', err);
-      setError(t('sessions.qr.unavailable'));
+      void fetchQR(id);
+    } finally {
+      setActionLoading(null);
     }
   };
 
   const handleStop = async (id: string) => {
+    setActionLoading(`stop:${id}`);
     try {
       await sessionApi.stop(id);
       setSessions(sessions.map(s => (s.id === id ? { ...s, status: 'disconnected' } : s)));
@@ -167,6 +216,8 @@ export function Sessions() {
     } catch (err) {
       console.error('Failed to stop:', err);
       fetchSessions();
+    } finally {
+      setActionLoading(null);
     }
   };
 
@@ -420,7 +471,12 @@ export function Sessions() {
               <button className="btn-secondary" onClick={() => setDeleteConfirmId(null)}>
                 {t('common.cancel')}
               </button>
-              <button className="btn-danger" onClick={() => handleDelete(deleteConfirmId)}>
+              <button
+                className="btn-danger"
+                onClick={() => handleDelete(deleteConfirmId)}
+                disabled={actionLoading === `delete:${deleteConfirmId}`}
+              >
+                {actionLoading === `delete:${deleteConfirmId}` && <Loader2 className="animate-spin" size={16} />}
                 {t('common.delete')}
               </button>
             </div>
@@ -450,8 +506,9 @@ export function Sessions() {
                   <button
                     className="btn-sm"
                     onClick={() => handleShowQR(session.id)}
-                    disabled={session.status !== 'qr_ready'}
+                    disabled={session.status !== 'qr_ready' || actionLoading === `qr:${session.id}`}
                   >
+                    {actionLoading === `qr:${session.id}` && <Loader2 className="animate-spin" size={14} />}
                     {session.status === 'qr_ready' ? t('sessions.qr.showQr') : t('sessions.qr.loading')}
                   </button>
                 </div>
@@ -479,18 +536,42 @@ export function Sessions() {
                 </button>
                 {canWrite &&
                 (session.status === 'created' || session.status === 'idle' || session.status === 'disconnected') ? (
-                  <button className="btn-action" onClick={() => handleStart(session.id)}>
-                    <Play size={16} />
+                  <button
+                    className="btn-action"
+                    onClick={() => handleStart(session.id)}
+                    disabled={actionLoading === `start:${session.id}`}
+                  >
+                    {actionLoading === `start:${session.id}` ? (
+                      <Loader2 className="animate-spin" size={16} />
+                    ) : (
+                      <Play size={16} />
+                    )}
                     {t('sessions.actions.start')}
                   </button>
                 ) : canWrite && ['ready', 'initializing', 'connecting', 'qr_ready'].includes(session.status) ? (
-                  <button className="btn-action" onClick={() => handleStop(session.id)}>
-                    <Square size={16} />
+                  <button
+                    className="btn-action"
+                    onClick={() => handleStop(session.id)}
+                    disabled={actionLoading === `stop:${session.id}`}
+                  >
+                    {actionLoading === `stop:${session.id}` ? (
+                      <Loader2 className="animate-spin" size={16} />
+                    ) : (
+                      <Square size={16} />
+                    )}
                     {t('sessions.actions.stop')}
                   </button>
                 ) : canWrite ? (
-                  <button className="btn-action" onClick={() => handleStart(session.id)}>
-                    <RefreshCw size={16} />
+                  <button
+                    className="btn-action"
+                    onClick={() => handleStart(session.id)}
+                    disabled={actionLoading === `start:${session.id}`}
+                  >
+                    {actionLoading === `start:${session.id}` ? (
+                      <Loader2 className="animate-spin" size={16} />
+                    ) : (
+                      <RefreshCw size={16} />
+                    )}
                     {t('sessions.actions.reconnect')}
                   </button>
                 ) : null}

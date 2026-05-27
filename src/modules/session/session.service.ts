@@ -11,7 +11,7 @@ import { Repository, In, DataSource } from 'typeorm';
 import { Session, SessionStatus } from './entities/session.entity';
 import { CreateSessionDto } from './dto';
 import { EngineFactory } from '../../engine/engine.factory';
-import { IWhatsAppEngine, EngineStatus } from '../../engine/interfaces/whatsapp-engine.interface';
+import { IWhatsAppEngine, EngineStatus, EngineEventCallbacks } from '../../engine/interfaces/whatsapp-engine.interface';
 import { createLogger } from '../../common/services/logger.service';
 import { EventsGateway } from '../events/events.gateway';
 import { WebhookService } from '../webhook/webhook.service';
@@ -224,6 +224,8 @@ export class SessionService implements OnModuleDestroy, OnModuleInit {
       proxyEnabled: !!session.proxyUrl,
     });
 
+    await this.updateStatus(id, SessionStatus.INITIALIZING);
+
     const engine = this.engineFactory.create({
       sessionId: session.name,
       proxyUrl: session.proxyUrl || undefined,
@@ -231,8 +233,8 @@ export class SessionService implements OnModuleDestroy, OnModuleInit {
     });
     this.engines.set(id, engine);
 
-    await engine.initialize({
-      onQRCode: (): void => {
+    const callbacks: EngineEventCallbacks = {
+      onQRCode: (qrCode: string): void => {
         this.logger.log('QR code generated', {
           sessionId: id,
           action: 'qr_generated',
@@ -249,6 +251,9 @@ export class SessionService implements OnModuleDestroy, OnModuleInit {
         );
 
         void this.updateStatus(id, SessionStatus.QR_READY);
+        if (qrCode) {
+          this.eventsGateway.emitQRCode(id, qrCode);
+        }
       },
       onReady: (phone: string, pushName: string): void => {
         this.logger.log(`Session ready: ${phone}`, {
@@ -274,13 +279,23 @@ export class SessionService implements OnModuleDestroy, OnModuleInit {
           reconnectState.attempts = 0;
         }
 
-        void this.sessionRepository.update(id, {
-          status: SessionStatus.READY,
-          phone,
-          pushName,
-          connectedAt: new Date(),
-          lastActiveAt: new Date(),
-        });
+        const now = new Date();
+        void this.sessionRepository
+          .update(id, {
+            status: SessionStatus.READY,
+            phone,
+            pushName,
+            connectedAt: now,
+            lastActiveAt: now,
+          })
+          .then(() => {
+            this.eventsGateway.emitSessionStatus(id, SessionStatus.READY, {
+              phone,
+              pushName,
+              connectedAt: now.toISOString(),
+              lastActiveAt: now.toISOString(),
+            });
+          });
       },
       onMessage: (message): void => {
         this.logger.debug(`Message received from ${message.from}`, {
@@ -348,9 +363,17 @@ export class SessionService implements OnModuleDestroy, OnModuleInit {
           void this.updateStatus(id, newStatus);
         }
       },
-    });
+    };
 
-    await this.updateStatus(id, SessionStatus.INITIALIZING);
+    void engine.initialize(callbacks).catch((error: unknown) => {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.logger.error('Engine initialization failed', errorMessage, {
+        sessionId: id,
+        action: 'engine_init_failed',
+      });
+      this.engines.delete(id);
+      void this.updateStatus(id, SessionStatus.FAILED);
+    });
   }
 
   private scheduleReconnect(id: string, session: Session): void {

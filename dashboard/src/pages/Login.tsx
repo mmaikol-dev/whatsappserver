@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Eye, EyeOff, Github } from 'lucide-react';
+import { Eye, EyeOff, Github, Loader2 } from 'lucide-react';
 import './Login.css';
 
 interface LoginProps {
@@ -77,6 +77,7 @@ export function Login({ onLogin }: LoginProps) {
           </div>
 
           <button type="submit" className="connect-btn" disabled={isLoading}>
+            {isLoading && <Loader2 className="animate-spin" size={18} />}
             {isLoading ? t('login.connecting') : t('login.connect')}
           </button>
         </form>
