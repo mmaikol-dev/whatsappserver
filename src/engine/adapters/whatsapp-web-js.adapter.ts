@@ -787,6 +787,41 @@ export class WhatsAppWebJsAdapter extends EventEmitter implements IWhatsAppEngin
     this.logger.log(`Deleted message ${messageId} from chat ${chatId} (forEveryone: ${forEveryone})`);
   }
 
+  // Send Seen (Mark as Read)
+  async sendSeen(chatId: string): Promise<void> {
+    this.ensureReady();
+    try {
+      const chat = await this.client!.getChatById(chatId);
+      // Send read receipt to the chat using the raw chat ID string
+      await this.client!.sendSeen(chat.id._serialized);
+      this.logger.log(`Sent seen/read receipt to chat ${chatId}`);
+    } catch (error) {
+      this.logger.error(`Failed to send seen to chat ${chatId}: ${String(error)}`);
+      throw error;
+    }
+  }
+
+  // Send Typing Indicator (simulate typing)
+  async sendTypingIndicator(chatId: string, duration: number = 3000): Promise<void> {
+    this.ensureReady();
+    try {
+      const chat = await this.client!.getChatById(chatId);
+      // Send typing state
+      await chat.sendStateTyping();
+      this.logger.log(`Sent typing indicator to chat ${chatId} for ${duration}ms`);
+
+      if (duration > 0) {
+        await new Promise(resolve => setTimeout(resolve, duration));
+        const updatedChat = await this.client!.getChatById(chatId);
+        await updatedChat.clearState();
+        this.logger.log(`Cleared typing state for chat ${chatId}`);
+      }
+    } catch (error) {
+      this.logger.error(`Failed to send typing indicator to chat ${chatId}: ${String(error)}`);
+      throw error;
+    }
+  }
+
   // Get Profile Picture
   async getProfilePicture(contactId: string): Promise<string | null> {
     this.ensureReady();

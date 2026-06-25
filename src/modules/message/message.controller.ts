@@ -2,7 +2,7 @@ import { Controller, Post, Get, Param, Body, Query, HttpCode, HttpStatus } from 
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery } from '@nestjs/swagger';
 import { MessageService } from './message.service';
 import { BulkMessageService } from './bulk-message.service';
-import { SendTextMessageDto, SendMediaMessageDto, MessageResponseDto } from './dto';
+import { SendTextMessageDto, SendMediaMessageDto, MessageResponseDto, SendSeenDto, SendTypingIndicatorDto } from './dto';
 import { SendBulkMessageDto, BulkMessageResponseDto } from './dto/bulk-message.dto';
 import { RequireRole } from '../auth/decorators/auth.decorators';
 import { ApiKeyRole } from '../auth/entities/api-key.entity';
@@ -276,6 +276,54 @@ export class MessageController {
     @Body() dto: { chatId: string; messageId: string; forEveryone?: boolean },
   ): Promise<{ success: boolean }> {
     await this.messageService.deleteMessage(sessionId, dto);
+    return { success: true };
+  }
+
+  // ========== Human-like Indicators ==========
+
+  @Post('send-seen')
+  @RequireRole(ApiKeyRole.OPERATOR)
+  @ApiOperation({
+    summary: 'Send read receipt to mark messages as seen',
+    description: 'Mark all unread messages in a chat as read/seen. Makes automation appear more human-like.',
+  })
+  @ApiParam({ name: 'sessionId', description: 'Session ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Read receipt sent successfully',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Session not active or invalid chat ID',
+  })
+  async sendSeen(
+    @Param('sessionId') sessionId: string,
+    @Body() dto: SendSeenDto,
+  ): Promise<{ success: boolean }> {
+    await this.messageService.sendSeen(sessionId, dto);
+    return { success: true };
+  }
+
+  @Post('send-typing-indicator')
+  @RequireRole(ApiKeyRole.OPERATOR)
+  @ApiOperation({
+    summary: 'Send typing indicator',
+    description: 'Show typing status in a chat to simulate human-like behavior. Automatically clears after specified duration.',
+  })
+  @ApiParam({ name: 'sessionId', description: 'Session ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Typing indicator sent successfully',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Session not active, invalid chat ID, or invalid duration',
+  })
+  async sendTypingIndicator(
+    @Param('sessionId') sessionId: string,
+    @Body() dto: SendTypingIndicatorDto,
+  ): Promise<{ success: boolean }> {
+    await this.messageService.sendTypingIndicator(sessionId, dto);
     return { success: true };
   }
 

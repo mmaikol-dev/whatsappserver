@@ -34,7 +34,7 @@ services:
       resources:
         limits:
           cpus: '1.0'
-          memory: 1024M
+          memory: 2560M
     healthcheck:
       test:
         [

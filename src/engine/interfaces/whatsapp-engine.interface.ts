@@ -260,6 +260,10 @@ export interface IWhatsAppEngine {
   // Message Operations
   deleteMessage(chatId: string, messageId: string, forEveryone?: boolean): Promise<void>;
 
+  // Human-like Indicators (Phase 3)
+  sendSeen(chatId: string): Promise<void>;
+  sendTypingIndicator(chatId: string, duration?: number): Promise<void>;
+
   // Contact Extended Operations
   getProfilePicture(contactId: string): Promise<string | null>;
   blockContact(contactId: string): Promise<void>;

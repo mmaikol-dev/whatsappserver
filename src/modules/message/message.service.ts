@@ -39,6 +39,17 @@ export class MessageService {
 
     const engine = this.getEngine(sessionId);
 
+    // Send typing indicator before text (unless explicitly disabled)
+    if (finalDto.typingDuration !== 0) {
+      const typingDuration = finalDto.typingDuration ?? this.getRandomTypingDuration();
+      try {
+        await engine.sendTypingIndicator(finalDto.chatId, typingDuration);
+      } catch (error) {
+        // Log but don't fail the message send if typing indicator fails
+        console.warn(`Failed to send typing indicator: ${String(error)}`);
+      }
+    }
+
     // Save message as pending BEFORE sending
     const message = await this.saveOutgoingMessage(sessionId, {
       chatId: finalDto.chatId,
@@ -86,6 +97,16 @@ export class MessageService {
     const engine = this.getEngine(sessionId);
     const media = this.buildMediaInput(dto);
 
+    // Send typing indicator before media (unless explicitly disabled)
+    if (dto.typingDuration !== 0) {
+      const typingDuration = dto.typingDuration ?? this.getRandomTypingDuration();
+      try {
+        await engine.sendTypingIndicator(dto.chatId, typingDuration);
+      } catch (error) {
+        console.warn(`Failed to send typing indicator: ${String(error)}`);
+      }
+    }
+
     // Save message as pending BEFORE sending
     const message = await this.saveOutgoingMessage(sessionId, {
       chatId: dto.chatId,
@@ -116,6 +137,16 @@ export class MessageService {
   async sendVideo(sessionId: string, dto: SendMediaMessageDto): Promise<MessageResponseDto> {
     const engine = this.getEngine(sessionId);
     const media = this.buildMediaInput(dto);
+
+    // Send typing indicator before media (unless explicitly disabled)
+    if (dto.typingDuration !== 0) {
+      const typingDuration = dto.typingDuration ?? this.getRandomTypingDuration();
+      try {
+        await engine.sendTypingIndicator(dto.chatId, typingDuration);
+      } catch (error) {
+        console.warn(`Failed to send typing indicator: ${String(error)}`);
+      }
+    }
 
     // Save message as pending BEFORE sending
     const message = await this.saveOutgoingMessage(sessionId, {
@@ -148,6 +179,16 @@ export class MessageService {
     const engine = this.getEngine(sessionId);
     const media = this.buildMediaInput(dto);
 
+    // Send typing indicator before media (unless explicitly disabled)
+    if (dto.typingDuration !== 0) {
+      const typingDuration = dto.typingDuration ?? this.getRandomTypingDuration();
+      try {
+        await engine.sendTypingIndicator(dto.chatId, typingDuration);
+      } catch (error) {
+        console.warn(`Failed to send typing indicator: ${String(error)}`);
+      }
+    }
+
     // Save message as pending BEFORE sending
     const message = await this.saveOutgoingMessage(sessionId, {
       chatId: dto.chatId,
@@ -177,6 +218,16 @@ export class MessageService {
   async sendDocument(sessionId: string, dto: SendMediaMessageDto): Promise<MessageResponseDto> {
     const engine = this.getEngine(sessionId);
     const media = this.buildMediaInput(dto);
+
+    // Send typing indicator before media (unless explicitly disabled)
+    if (dto.typingDuration !== 0) {
+      const typingDuration = dto.typingDuration ?? this.getRandomTypingDuration();
+      try {
+        await engine.sendTypingIndicator(dto.chatId, typingDuration);
+      } catch (error) {
+        console.warn(`Failed to send typing indicator: ${String(error)}`);
+      }
+    }
 
     // Save message as pending BEFORE sending
     const message = await this.saveOutgoingMessage(sessionId, {
@@ -464,6 +515,39 @@ export class MessageService {
   ): Promise<void> {
     const engine = this.getEngine(sessionId);
     await engine.deleteMessage(dto.chatId, dto.messageId, dto.forEveryone ?? true);
+  }
+
+  // ========== Human-like Indicators ==========
+
+  /**
+   * Send a read receipt to mark messages as seen in a chat
+   */
+  async sendSeen(sessionId: string, dto: { chatId: string }): Promise<void> {
+    const engine = this.getEngine(sessionId);
+    await engine.sendSeen(dto.chatId);
+  }
+
+  /**
+   * Send typing indicator to simulate human typing
+   * @param duration How long to show typing indicator in milliseconds (default 3000ms)
+   */
+  async sendTypingIndicator(sessionId: string, dto: { chatId: string; duration?: number }): Promise<void> {
+    const engine = this.getEngine(sessionId);
+    const duration = dto.duration ?? 3000;
+    if (duration < 0) {
+      throw new BadRequestException('Duration must be a non-negative number');
+    }
+    if (duration > 60000) {
+      throw new BadRequestException('Duration cannot exceed 60 seconds');
+    }
+    await engine.sendTypingIndicator(dto.chatId, duration);
+  }
+
+  /**
+   * Generate random typing duration between 1000-2000ms for human-like behavior
+   */
+  private getRandomTypingDuration(): number {
+    return Math.floor(Math.random() * 1000) + 1000; // Random between 1000-2000ms
   }
 
   private getEngine(sessionId: string) {

@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, IsNotEmpty, IsOptional, MaxLength, IsUrl, ValidateIf } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, MaxLength, IsUrl, ValidateIf, IsNumber, Min, Max } from 'class-validator';
 
 export class SendTextMessageDto {
   @ApiProperty({
@@ -19,6 +19,18 @@ export class SendTextMessageDto {
   @IsNotEmpty()
   @MaxLength(4096)
   text: string;
+
+  @ApiPropertyOptional({
+    description: 'Show typing indicator before sending message (in milliseconds). Default 1000-2000 random. Set to 0 to disable.',
+    example: 2000,
+    minimum: 0,
+    maximum: 60000,
+  })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(60000)
+  typingDuration?: number;
 }
 
 export class SendMediaMessageDto {
@@ -73,6 +85,18 @@ export class SendMediaMessageDto {
   @IsString()
   @MaxLength(1024)
   caption?: string;
+
+  @ApiPropertyOptional({
+    description: 'Show typing indicator before sending media (in milliseconds). Default 1500-3000 random. Set to 0 to disable.',
+    example: 2000,
+    minimum: 0,
+    maximum: 60000,
+  })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(60000)
+  typingDuration?: number;
 }
 
 export class MessageResponseDto {
