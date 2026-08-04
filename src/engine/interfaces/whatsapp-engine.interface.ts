@@ -196,6 +196,7 @@ export interface PaginatedProducts {
 
 export interface EngineEventCallbacks {
   onQRCode?: (qr: string) => void;
+  onPairingCode?: (code: string) => void;
   onReady?: (phone: string, pushName: string) => void;
   onMessage?: (message: IncomingMessage) => void;
   onMessageAck?: (messageId: string, ack: number) => void;
@@ -215,6 +216,11 @@ export interface IWhatsAppEngine {
   getQRCode(): string | null;
   getPhoneNumber(): string | null;
   getPushName(): string | null;
+
+  // Pairing code authentication (alternative to QR)
+  getPairingCode(): string | null;
+  requestPairingCode(phoneNumber: string, showNotification?: boolean): Promise<string>;
+  cancelPairingCode(): Promise<void>;
 
   // Messaging - Basic
   sendTextMessage(chatId: string, text: string): Promise<MessageResult>;

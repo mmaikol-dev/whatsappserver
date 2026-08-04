@@ -165,6 +165,18 @@
       "loading": "Loading...",
       "scanToConnect": "Scan QR code to connect"
     },
+    "pairing": {
+      "title": "Link with Phone Number",
+      "useNumberInstead": "Link with phone number instead",
+      "step1": "<strong>1.</strong> Open WhatsApp on your phone",
+      "step2": "<strong>2.</strong> Tap <strong>Linked Devices</strong> → <strong>Link a Device</strong> → <strong>Link with phone number instead</strong> and enter the code",
+      "phoneLabel": "Phone Number (international, no symbols)",
+      "phonePlaceholder": "e.g., 628123456789",
+      "requestCode": "Request Code",
+      "refreshing": "The code refreshes automatically every 3 minutes",
+      "errorTitle": "Pairing Code Failed",
+      "errorDefault": "Failed to request pairing code"
+    },
     "details": {
       "title": "Session Details",
       "name": "Name",
@@ -240,6 +252,7 @@
       "session.connected": "When a session connects",
       "session.disconnected": "When a session disconnects",
       "session.qr": "When QR code is generated",
+      "session.pairing-code": "When a pairing code is generated",
       "all": "All events"
     }
   },

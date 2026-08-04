@@ -1,7 +1,13 @@
 import { Controller, Get, Post, Delete, Param, Body, HttpCode, HttpStatus } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { SessionService } from './session.service';
-import { CreateSessionDto, SessionResponseDto, QRCodeResponseDto } from './dto';
+import {
+  CreateSessionDto,
+  SessionResponseDto,
+  QRCodeResponseDto,
+  RequestPairingCodeDto,
+  PairingCodeResponseDto,
+} from './dto';
 import { Session } from './entities/session.entity';
 import { AuditService } from '../audit/audit.service';
 import { AuditAction } from '../audit/entities/audit-log.entity';
@@ -151,6 +157,63 @@ export class SessionController {
       sessionId: id,
     });
     return qrCode;
+  }
+
+  @Post(':id/pairing-code')
+  @RequireRole(ApiKeyRole.OPERATOR)
+  @ApiOperation({
+    summary: 'Request a pairing code for phone-number linking (alternative to QR)',
+  })
+  @ApiParam({ name: 'id', description: 'Session ID' })
+  @ApiResponse({
+    status: 201,
+    description: 'Pairing code generated',
+    type: PairingCodeResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Session not started, already authenticated, or invalid phone number',
+  })
+  @ApiResponse({ status: 404, description: 'Session not found' })
+  async requestPairingCode(
+    @Param('id') id: string,
+    @Body() dto: RequestPairingCodeDto,
+  ): Promise<PairingCodeResponseDto> {
+    const result = await this.sessionService.requestPairingCode(id, dto.phoneNumber, dto.showNotification ?? true);
+    await this.auditService.logInfo(AuditAction.SESSION_PAIRING_CODE_GENERATED, {
+      sessionId: id,
+      metadata: { phoneNumber: dto.phoneNumber },
+    });
+    return result;
+  }
+
+  @Get(':id/pairing-code')
+  @ApiOperation({ summary: 'Get the current pairing code for a session' })
+  @ApiParam({ name: 'id', description: 'Session ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Current pairing code',
+    type: PairingCodeResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Pairing code not ready or session already authenticated',
+  })
+  @ApiResponse({ status: 404, description: 'Session not found' })
+  async getPairingCode(@Param('id') id: string): Promise<PairingCodeResponseDto> {
+    return this.sessionService.getPairingCode(id);
+  }
+
+  @Delete(':id/pairing-code')
+  @RequireRole(ApiKeyRole.OPERATOR)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Cancel the pairing code flow and return to QR mode' })
+  @ApiParam({ name: 'id', description: 'Session ID' })
+  @ApiResponse({ status: 204, description: 'Pairing code flow cancelled' })
+  @ApiResponse({ status: 400, description: 'Session not started' })
+  @ApiResponse({ status: 404, description: 'Session not found' })
+  async cancelPairingCode(@Param('id') id: string): Promise<void> {
+    await this.sessionService.cancelPairingCode(id);
   }
 
   @Get(':id/groups')

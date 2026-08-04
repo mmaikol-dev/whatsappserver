@@ -40,3 +40,14 @@ export class QRCodeResponseDto {
   @ApiProperty({ enum: SessionStatus, example: SessionStatus.QR_READY })
   status: SessionStatus;
 }
+
+export class PairingCodeResponseDto {
+  @ApiProperty({
+    description: 'Pairing code (8 characters) to enter on the phone',
+    example: 'ABCDEFGH',
+  })
+  pairingCode: string;
+
+  @ApiProperty({ enum: SessionStatus, example: SessionStatus.QR_READY })
+  status: SessionStatus;
+}

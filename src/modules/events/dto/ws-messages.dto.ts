@@ -18,6 +18,7 @@ export const SUBSCRIBABLE_EVENTS = [
   'message.revoked',
   'session.status',
   'session.qr',
+  'session.pairing-code',
   'session.authenticated',
   'session.disconnected',
   'group.join',

@@ -17,6 +17,12 @@ interface QRCodeEvent {
   timestamp: string;
 }
 
+interface PairingCodeEvent {
+  sessionId: string;
+  pairingCode: string;
+  timestamp: string;
+}
+
 interface MessageEvent {
   sessionId: string;
   message: Record<string, unknown>;
@@ -26,6 +32,7 @@ interface MessageEvent {
 interface WebSocketEvents {
   onSessionStatus?: (event: SessionStatusEvent) => void;
   onQRCode?: (event: QRCodeEvent) => void;
+  onPairingCode?: (event: PairingCodeEvent) => void;
   onMessage?: (event: MessageEvent) => void;
 }
 
@@ -86,7 +93,7 @@ export function useWebSocket(events: WebSocketEvents = {}) {
       socketRef.current?.emit('message', {
         type: 'subscribe',
         sessionId: '*',
-        events: ['session.status', 'session.qr', 'message.received', 'message.sent', 'message.ack'],
+        events: ['session.status', 'session.qr', 'session.pairing-code', 'message.received', 'message.sent', 'message.ack'],
         requestId: `dashboard-${Date.now()}`,
       });
     });
@@ -144,6 +151,14 @@ export function useWebSocket(events: WebSocketEvents = {}) {
         });
       }
 
+      if (event === 'session.pairing-code') {
+        events.onPairingCode?.({
+          sessionId,
+          pairingCode: String(payload.pairingCode || ''),
+          timestamp: message.timestamp,
+        });
+      }
+
       if (event === 'message.received' || event === 'message.sent') {
         events.onMessage?.({
           sessionId,
@@ -156,15 +171,17 @@ export function useWebSocket(events: WebSocketEvents = {}) {
     socket.on('message', handleServerMessage);
     socket.on('session:status', events.onSessionStatus ?? (() => undefined));
     socket.on('session:qr', events.onQRCode ?? (() => undefined));
+    socket.on('session:pairing-code', events.onPairingCode ?? (() => undefined));
     socket.on('session:message', events.onMessage ?? (() => undefined));
 
     return () => {
       socket.off('message', handleServerMessage);
       socket.off('session:status');
       socket.off('session:qr');
+      socket.off('session:pairing-code');
       socket.off('session:message');
     };
-  }, [events.onSessionStatus, events.onQRCode, events.onMessage]);
+  }, [events.onSessionStatus, events.onQRCode, events.onPairingCode, events.onMessage]);
 
   return { isConnected };
 }

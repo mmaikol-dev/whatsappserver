@@ -216,6 +216,13 @@ export class EventsGateway implements OnGatewayInit, OnGatewayConnection, OnGate
   }
 
   /**
+   * Emit pairing code update for a session
+   */
+  emitPairingCode(sessionId: string, pairingCode: string) {
+    this.emitToRooms(sessionId, 'session.pairing-code', { pairingCode });
+  }
+
+  /**
    * Emit new message notification
    */
   emitMessage(sessionId: string, message: Record<string, unknown>) {

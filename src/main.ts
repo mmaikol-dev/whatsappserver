@@ -67,6 +67,16 @@ STORAGE_PATH=./data/media
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  // Global safety net: whatsapp-web.js/puppeteer can reject long after a
+  // session disconnects (e.g. TargetCloseError during reconnect). Log these
+  // instead of letting one session take down the entire API process.
+  process.on('unhandledRejection', (reason: unknown) => {
+    console.error('[Bootstrap] Unhandled promise rejection:', reason);
+  });
+  process.on('uncaughtException', (error: Error) => {
+    console.error('[Bootstrap] Uncaught exception:', error);
+  });
+
   // Enable shutdown hooks for graceful shutdown
   app.enableShutdownHooks();
 

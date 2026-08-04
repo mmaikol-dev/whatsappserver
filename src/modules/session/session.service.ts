@@ -255,6 +255,24 @@ export class SessionService implements OnModuleDestroy, OnModuleInit {
           this.eventsGateway.emitQRCode(id, qrCode);
         }
       },
+      onPairingCode: (code: string): void => {
+        this.logger.log('Pairing code generated', {
+          sessionId: id,
+          action: 'pairing_code_generated',
+        });
+
+        void this.hookManager.execute(
+          'session:pairing-code',
+          { code },
+          {
+            sessionId: id,
+            source: 'Engine',
+          },
+        );
+
+        this.eventsGateway.emitPairingCode(id, code);
+        void this.webhookService.dispatch(id, 'session.pairing-code', { code });
+      },
       onReady: (phone: string, pushName: string): void => {
         this.logger.log(`Session ready: ${phone}`, {
           sessionId: id,
@@ -322,9 +340,9 @@ export class SessionService implements OnModuleDestroy, OnModuleInit {
             }
 
             // Dispatch to webhooks with potentially modified message
-            void this.webhookService.dispatch(id, 'message.received', finalMessage as Record<string, unknown>);
+            void this.webhookService.dispatch(id, 'message.received', finalMessage);
             // Emit real-time event to WebSocket clients
-            this.eventsGateway.emitMessage(id, finalMessage as Record<string, unknown>);
+            this.eventsGateway.emitMessage(id, finalMessage);
           });
       },
       onDisconnected: (reason: string): void => {
@@ -479,6 +497,78 @@ export class SessionService implements OnModuleDestroy, OnModuleInit {
 
     return {
       qrCode,
+      status: session.status,
+    };
+  }
+
+  async getPairingCode(id: string): Promise<{ pairingCode: string; status: SessionStatus }> {
+    const session = await this.findOne(id);
+    const engine = this.engines.get(id);
+
+    if (!engine) {
+      throw new BadRequestException('Session is not started. Call POST /sessions/:id/start first.');
+    }
+
+    const pairingCode = engine.getPairingCode();
+
+    if (!pairingCode) {
+      if (session.status === SessionStatus.READY) {
+        throw new BadRequestException('Session is already authenticated, no pairing code needed');
+      }
+      throw new BadRequestException('Pairing code is not ready yet. Request one first.');
+    }
+
+    return {
+      pairingCode,
+      status: session.status,
+    };
+  }
+
+  async requestPairingCode(
+    id: string,
+    phoneNumber: string,
+    showNotification: boolean = true,
+  ): Promise<{ pairingCode: string; status: SessionStatus }> {
+    const session = await this.findOne(id);
+    const engine = this.engines.get(id);
+
+    if (!engine) {
+      throw new BadRequestException('Session is not started. Call POST /sessions/:id/start first.');
+    }
+
+    if (session.status === SessionStatus.READY) {
+      throw new BadRequestException('Session is already authenticated, no pairing code needed');
+    }
+
+    const pairingCode = await engine.requestPairingCode(phoneNumber, showNotification);
+
+    this.logger.log(`Pairing code requested for phone ${phoneNumber}`, {
+      sessionId: id,
+      action: 'pairing_code_requested',
+    });
+
+    return {
+      pairingCode,
+      status: session.status,
+    };
+  }
+
+  async cancelPairingCode(id: string): Promise<{ status: SessionStatus }> {
+    const session = await this.findOne(id);
+    const engine = this.engines.get(id);
+
+    if (!engine) {
+      throw new BadRequestException('Session is not started. Call POST /sessions/:id/start first.');
+    }
+
+    await engine.cancelPairingCode();
+
+    this.logger.log('Pairing code flow cancelled', {
+      sessionId: id,
+      action: 'pairing_code_cancelled',
+    });
+
+    return {
       status: session.status,
     };
   }

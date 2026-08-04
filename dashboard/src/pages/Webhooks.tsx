@@ -31,6 +31,7 @@ const availableEventNames = [
   'session.connected',
   'session.disconnected',
   'session.qr',
+  'session.pairing-code',
   '*',
 ] as const;
 

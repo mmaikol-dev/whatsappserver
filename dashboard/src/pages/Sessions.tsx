@@ -21,6 +21,13 @@ export function Sessions() {
   const [newSessionName, setNewSessionName] = useState('');
   const [creating, setCreating] = useState(false);
   const [qrData, setQrData] = useState<{ sessionId: string; sessionName: string; qrCode: string } | null>(null);
+  const [pairingData, setPairingData] = useState<{
+    sessionId: string;
+    sessionName: string;
+    phoneNumber: string;
+    pairingCode: string;
+  } | null>(null);
+  const [pairingLoading, setPairingLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
@@ -68,6 +75,11 @@ export function Sessions() {
       },
       [sessions],
     ),
+    onPairingCode: useCallback((event: { sessionId: string; pairingCode: string }) => {
+      setPairingData(prev =>
+        prev && prev.sessionId === event.sessionId ? { ...prev, pairingCode: event.pairingCode } : prev,
+      );
+    }, []),
   });
 
   const fetchSessions = async () => {
@@ -204,6 +216,48 @@ export function Sessions() {
       void fetchQR(id);
     } finally {
       setActionLoading(null);
+    }
+  };
+
+  const handleOpenPairing = (id: string) => {
+    const session = sessions.find(s => s.id === id);
+    setQrData(null);
+    setPairingData({
+      sessionId: id,
+      sessionName: session?.name || currentSessionName.current,
+      phoneNumber: '',
+      pairingCode: '',
+    });
+  };
+
+  const handleRequestPairingCode = async () => {
+    if (!pairingData || !pairingData.phoneNumber.trim()) return;
+    setPairingLoading(true);
+    try {
+      const result = await sessionApi.requestPairingCode(pairingData.sessionId, pairingData.phoneNumber.trim());
+      setPairingData(prev => (prev ? { ...prev, pairingCode: result.pairingCode } : prev));
+    } catch (err) {
+      console.error('Failed to request pairing code:', err);
+      toast.error(
+        t('sessions.pairing.errorTitle'),
+        err instanceof Error ? err.message : t('sessions.pairing.errorDefault'),
+      );
+    } finally {
+      setPairingLoading(false);
+    }
+  };
+
+  const handleCancelPairing = async () => {
+    if (!pairingData) return;
+    setPairingLoading(true);
+    try {
+      await sessionApi.cancelPairingCode(pairingData.sessionId);
+    } catch (err) {
+      console.error('Failed to cancel pairing:', err);
+    } finally {
+      setPairingLoading(false);
+      setPairingData(null);
+      void handleShowQR(pairingData.sessionId);
     }
   };
 
@@ -388,12 +442,74 @@ export function Sessions() {
                   <p className="qr-auto-refresh">
                     <RefreshCw size={14} className="spin-slow" /> {t('sessions.qr.autoRefresh')}
                   </p>
+                  <button className="btn-secondary" onClick={() => handleOpenPairing(qrData.sessionId)}>
+                    {t('sessions.pairing.useNumberInstead')}
+                  </button>
                 </>
               ) : (
                 <div style={{ padding: '2rem' }}>
                   <Loader2 className="animate-spin" size={48} />
                   <p>{t('sessions.qr.generating')}</p>
                 </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {pairingData && (
+        <div className="modal-overlay" onClick={() => handleCancelPairing()}>
+          <div className="modal qr-modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <div className="modal-title">
+                <h2>{t('sessions.pairing.title')}</h2>
+                <span className="session-name">{pairingData.sessionName}</span>
+              </div>
+              <button
+                className="btn-close"
+                onClick={() => handleCancelPairing()}
+                aria-label={t('common.close')}
+                disabled={pairingLoading}
+              >
+                <X size={20} color="#64748b" />
+              </button>
+            </div>
+            <div className="modal-body" style={{ textAlign: 'center' }}>
+              <div className="qr-instructions">
+                <p className="qr-step"><Trans i18nKey="sessions.pairing.step1" components={{ strong: <strong /> }} /></p>
+                <p className="qr-step"><Trans i18nKey="sessions.pairing.step2" components={{ strong: <strong /> }} /></p>
+              </div>
+              <label style={{ display: 'block', textAlign: 'left', marginBottom: '0.5rem' }}>
+                {t('sessions.pairing.phoneLabel')}
+              </label>
+              <input
+                type="text"
+                inputMode="numeric"
+                placeholder={t('sessions.pairing.phonePlaceholder')}
+                value={pairingData.phoneNumber}
+                onChange={e => {
+                  const value = e.target.value.replace(/\D/g, '');
+                  setPairingData(prev => (prev ? { ...prev, phoneNumber: value } : prev));
+                }}
+                disabled={!!pairingData.pairingCode || pairingLoading}
+              />
+              {pairingData.pairingCode ? (
+                <>
+                  <div className="pairing-code-display">{pairingData.pairingCode}</div>
+                  <p className="qr-auto-refresh">
+                    <RefreshCw size={14} className="spin-slow" /> {t('sessions.pairing.refreshing')}
+                  </p>
+                </>
+              ) : (
+                <button
+                  className="btn-primary"
+                  onClick={() => handleRequestPairingCode()}
+                  disabled={pairingLoading || pairingData.phoneNumber.length < 10}
+                  style={{ marginTop: '1rem' }}
+                >
+                  {pairingLoading ? <Loader2 className="animate-spin" size={16} /> : null}
+                  {t('sessions.pairing.requestCode')}
+                </button>
               )}
             </div>
           </div>

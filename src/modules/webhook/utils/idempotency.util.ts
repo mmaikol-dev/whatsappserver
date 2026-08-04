@@ -50,6 +50,10 @@ export function generateIdempotencyKey(event: string, data: Record<string, unkno
       // QR changes each time, use the QR data hash for uniqueness
       return `qr_${toStr(data.sessionId)}_${hashData({ qr: data.qr })}`;
 
+    case 'session.pairing-code':
+      // Pairing code changes on each request, use the code hash for uniqueness
+      return `pair_${toStr(data.sessionId)}_${hashData({ code: data.code })}`;
+
     case 'session.authenticated':
       // Auth only happens once per session lifecycle
       return `auth_${toStr(data.sessionId)}_${hashData(data)}`;

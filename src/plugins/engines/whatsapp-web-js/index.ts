@@ -78,6 +78,7 @@ export class WhatsAppWebJsPlugin implements IEnginePlugin {
       'channels',
       'status-updates',
       'catalog',
+      'pairing-code',
     ];
   }
 

@@ -54,6 +54,7 @@ export class WhatsAppWebJsAdapter extends EventEmitter implements IWhatsAppEngin
   private client: Client | null = null;
   private status: EngineStatus = EngineStatus.DISCONNECTED;
   private qrCode: string | null = null;
+  private pairingCode: string | null = null;
   private phoneNumber: string | null = null;
   private pushName: string | null = null;
   private callbacks: EngineEventCallbacks = {};
@@ -110,10 +111,15 @@ export class WhatsAppWebJsAdapter extends EventEmitter implements IWhatsAppEngin
   private setupEventHandlers(): void {
     if (!this.client) return;
 
+    this.client.on('error', (error: Error) => {
+      this.logger.error('WhatsApp client error', error?.message || String(error));
+    });
+
     // eslint-disable-next-line @typescript-eslint/no-misused-promises
     this.client.on('qr', async (qr: string) => {
       try {
         this.qrCode = await qrcode.toDataURL(qr);
+        this.pairingCode = null;
         this.setStatus(EngineStatus.QR_READY);
         this.callbacks.onQRCode?.(this.qrCode);
       } catch (error) {
@@ -121,9 +127,15 @@ export class WhatsAppWebJsAdapter extends EventEmitter implements IWhatsAppEngin
       }
     });
 
+    this.client.on('code', (code: string) => {
+      this.pairingCode = code;
+      this.callbacks.onPairingCode?.(code);
+    });
+
     this.client.on('authenticated', () => {
       this.setStatus(EngineStatus.AUTHENTICATING);
       this.qrCode = null;
+      this.pairingCode = null;
     });
 
     this.client.on('ready', () => {
@@ -247,7 +259,11 @@ export class WhatsAppWebJsAdapter extends EventEmitter implements IWhatsAppEngin
 
   async destroy(): Promise<void> {
     if (this.client) {
-      await this.client.destroy();
+      try {
+        await this.client.destroy();
+      } catch (error) {
+        this.logger.warn('Destroy client failed:', String(error));
+      }
       this.client = null;
       this.setStatus(EngineStatus.DISCONNECTED);
     }
@@ -259,6 +275,60 @@ export class WhatsAppWebJsAdapter extends EventEmitter implements IWhatsAppEngin
 
   getQRCode(): string | null {
     return this.qrCode;
+  }
+
+  getPairingCode(): string | null {
+    return this.pairingCode;
+  }
+
+  async requestPairingCode(phoneNumber: string, showNotification: boolean = true): Promise<string> {
+    if (!this.client) {
+      throw new Error('WhatsApp client is not initialized');
+    }
+    const code = await this.timeoutPairingCode(phoneNumber, showNotification);
+    this.pairingCode = code;
+    return code;
+  }
+
+  private timeoutPairingCode(phoneNumber: string, showNotification: boolean): Promise<string> {
+    return new Promise<string>((resolve, reject) => {
+      const timer = setTimeout(() => {
+        reject(
+          new Error(
+            'Pairing code request timed out. Ensure the phone number is a registered WhatsApp account in full international format (e.g. 15551234567, no + or spaces) and the session is waiting for a QR code.',
+          ),
+        );
+      }, 90000);
+
+      this.client!.requestPairingCode(phoneNumber, showNotification).then(
+        (code: string) => {
+          clearTimeout(timer);
+          resolve(code);
+        },
+        (error: unknown) => {
+          clearTimeout(timer);
+          reject(error instanceof Error ? error : new Error(String(error)));
+        },
+      );
+
+      // whatsapp-web.js may deliver the code via the 'code' event without
+      // resolving the promise; surface it either way.
+      const onCode = (code: string): void => {
+        clearTimeout(timer);
+        this.client?.off('code', onCode);
+        this.pairingCode = code;
+        resolve(code);
+      };
+      this.client!.on('code', onCode);
+    });
+  }
+
+  async cancelPairingCode(): Promise<void> {
+    if (!this.client) {
+      throw new Error('WhatsApp client is not initialized');
+    }
+    this.pairingCode = null;
+    await this.client.cancelPairingCode();
   }
 
   getPhoneNumber(): string | null {

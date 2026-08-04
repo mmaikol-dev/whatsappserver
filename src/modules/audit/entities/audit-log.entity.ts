@@ -14,6 +14,7 @@ export enum AuditAction {
   SESSION_STOPPED = 'session_stopped',
   SESSION_DELETED = 'session_deleted',
   SESSION_QR_GENERATED = 'session_qr_generated',
+  SESSION_PAIRING_CODE_GENERATED = 'session_pairing_code_generated',
   SESSION_CONNECTED = 'session_connected',
   SESSION_DISCONNECTED = 'session_disconnected',
 

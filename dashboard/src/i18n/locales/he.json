@@ -165,6 +165,18 @@
       "loading": "טוען...",
       "scanToConnect": "יש לסרוק את ה-QR כדי להתחבר"
     },
+    "pairing": {
+      "title": "קישור לפי מספר טלפון",
+      "useNumberInstead": "קישור לפי מספר טלפון במקום QR",
+      "step1": "<strong>1.</strong> יש לפתוח את WhatsApp במכשיר",
+      "step2": "<strong>2.</strong> יש להקיש על <strong>מכשירים מקושרים</strong> ← <strong>קישור מכשיר</strong> ← <strong>קישור לפי מספר טלפון</strong> ולהזין את הקוד",
+      "phoneLabel": "מספר טלפון (פורמט בינלאומי, ללא סימנים)",
+      "phonePlaceholder": "לדוגמה: 628123456789",
+      "requestCode": "בקשת קוד",
+      "refreshing": "הקוד מתחדש אוטומטית כל 3 דקות",
+      "errorTitle": "בקשת קוד נכשלה",
+      "errorDefault": "בקשת קוד הקישור נכשלה"
+    },
     "details": {
       "title": "פרטי Session",
       "name": "שם",
@@ -240,6 +252,7 @@
       "session.connected": "כאשר Session מתחבר",
       "session.disconnected": "כאשר Session מתנתק",
       "session.qr": "כאשר נוצר קוד QR",
+      "session.pairing-code": "כאשר נוצר קוד התאמה",
       "all": "כל האירועים"
     }
   },

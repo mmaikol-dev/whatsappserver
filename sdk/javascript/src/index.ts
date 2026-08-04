@@ -71,6 +71,15 @@ export class OpenWAClient {
       start: (id: string) => this.request<Session>('POST', `/api/sessions/${id}/start`),
       stop: (id: string) => this.request<Session>('POST', `/api/sessions/${id}/stop`),
       delete: (id: string) => this.request<void>('DELETE', `/api/sessions/${id}`),
+      getQR: (id: string) => this.request<{ qrCode: string; status: string }>('GET', `/api/sessions/${id}/qr`),
+      requestPairingCode: (id: string, phoneNumber: string, showNotification = true) =>
+        this.request<{ pairingCode: string; status: string }>('POST', `/api/sessions/${id}/pairing-code`, {
+          phoneNumber,
+          showNotification,
+        }),
+      getPairingCode: (id: string) =>
+        this.request<{ pairingCode: string; status: string }>('GET', `/api/sessions/${id}/pairing-code`),
+      cancelPairingCode: (id: string) => this.request<void>('DELETE', `/api/sessions/${id}/pairing-code`),
     };
   }
 

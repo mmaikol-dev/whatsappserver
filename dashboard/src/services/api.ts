@@ -187,6 +187,13 @@ export const sessionApi = {
   start: (id: string) => request<Session>(`/sessions/${id}/start`, { method: 'POST' }),
   stop: (id: string) => request<Session>(`/sessions/${id}/stop`, { method: 'POST' }),
   getQR: (id: string) => request<{ qrCode: string; status: string }>(`/sessions/${id}/qr`),
+  requestPairingCode: (id: string, phoneNumber: string, showNotification = true) =>
+    request<{ pairingCode: string; status: string }>(`/sessions/${id}/pairing-code`, {
+      method: 'POST',
+      body: JSON.stringify({ phoneNumber, showNotification }),
+    }),
+  getPairingCode: (id: string) => request<{ pairingCode: string; status: string }>(`/sessions/${id}/pairing-code`),
+  cancelPairingCode: (id: string) => request<void>(`/sessions/${id}/pairing-code`, { method: 'DELETE' }),
   getStats: () => request<SessionStats>('/sessions/stats/overview'),
   getGroups: (id: string) => request<{ id: string; name: string }[]>(`/sessions/${id}/groups`),
 };
